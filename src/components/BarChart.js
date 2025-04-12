@@ -1,59 +1,61 @@
-'use client';
+import React from "react";
+import { max, scaleBand, scaleLinear } from "d3";
+import { XAxis, YAxis } from "./axes";
 
-import { useEffect, useRef } from "react";
-import * as d3 from 'd3';
-import { drawBarChart } from "./drawBarChart";
+export function BarChart(props) {
+    const { offsetX, offsetY, data, height, width, selectedAirlineID, setSelectedAirlineID } = props;
 
-export default function BarChart(props){
-    const { svgWidth, svgHeight, marginLeft, marginTop, data, xScale, yScale } = props;
-    
-    const d3Selection = useRef();
+    const margin = { top: 20, right: 20, bottom: 30, left: 140 };
 
-    useEffect(() => {
-        const svg = d3.select(d3Selection.current);
-        let width = svgWidth - marginLeft;
-        let height = svgHeight - marginTop - 80;
+    // Define inner drawing area
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = height - margin.top - margin.bottom;
 
-        // Remove old g
-        let barChartLayer = svg.select('g.bar-chart-layer');
-        if (barChartLayer.empty()) {
-            barChartLayer = svg.append("g")
-                .attr('class', 'bar-chart-layer')
-                .attr("transform", `translate(${marginLeft},${marginTop})`);
-        } else {
-            barChartLayer.selectAll('*').remove();
-        }
+    // 1. Find the maximum count
+    const maxCount = max(data, d => d.Count);
 
-        // Add title on top
-        svg.selectAll('.chart-title').remove(); // clear previous
-        svg.append("text")
-            .attr('class', 'chart-title')
-            .attr("x", svgWidth / 2)
-            .attr("y", marginTop - 5) // top
-            .style("text-anchor", "middle")
-            .style("font-weight", "bold")
-            .text("Bikers start from");
+    // 2. Define xScale and yScale based on innerWidth/innerHeight
+    const xScale = scaleLinear()
+        .domain([0, maxCount])
+        .range([0, innerWidth]);
 
-        // X-axis
-        barChartLayer.append('g')
-            .attr("transform", `translate(0, ${height})`)
-            .attr('class', 'x-axis')
-            .call(d3.axisBottom(xScale))
-            .selectAll('text')
-            .style('text-anchor', 'end')
-            .attr('dx', '-0.8em')
-            .attr('dy', '.015em')
-            .attr('transform', 'rotate(-65)');
+    const yScale = scaleBand()
+        .domain(data.map(d => d.AirlineName))
+        .range([0, innerHeight])
+        .padding(0.2);
 
-        // Y-axis
-        barChartLayer.append('g')
-            .attr('class', 'y-axis')
-            .call(d3.axisLeft(yScale));
+    // 3. Color function
+    const getBarColor = (d) => {
+        return d.AirlineID === selectedAirlineID ? "#992a5b" : "#2a5599";
+    };
 
-        // Draw bars
-        drawBarChart(barChartLayer, data, xScale, yScale, width, height);
+    // 4. Mouseover and mouseout handlers
+    const handleMouseOver = (d) => {
+        setSelectedAirlineID(d.AirlineID);
+    };
 
-    }, [data, xScale, yScale]);
+    const handleMouseOut = () => {
+        setSelectedAirlineID(null);
+    };
 
-    return <svg width={svgWidth} height={svgHeight} ref={d3Selection}></svg>;
+    return (
+        <g transform={`translate(${offsetX+50}, ${offsetY})`}>
+            {data.map((d, i) => (
+                <rect
+                    key={i}
+                    x={0}
+                    y={yScale(d.AirlineName)}
+                    width={xScale(d.Count)}
+                    height={yScale.bandwidth()}
+                    fill={getBarColor(d)}
+                    stroke="black"
+                    onMouseOver={() => handleMouseOver(d)}
+                    onMouseOut={handleMouseOut}
+                />
+            ))}
+            {/* Draw axes */}
+            <XAxis xScale={xScale} width={innerWidth} height={innerHeight} />
+            <YAxis yScale={yScale} height={innerHeight} offsetX={margin.left} />
+        </g>
+    );
 }
