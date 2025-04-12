@@ -4,7 +4,7 @@ import * as d3 from "d3";
 
 import { groupByAirline, groupByAirport } from "../components/utils";
 import { AirportMap } from "../components/airportMap";
-import { BarChart } from "../components/barChart1";
+import { BarChart } from "../components/barChart";
 import styles from '../styles/assignment5_styles.module.css';
 
 
